@@ -1,0 +1,19 @@
+{
+  "name": "syphon",
+  "version": "1.0.0",
+  "description": "Relay your Slack notifications to Messenger",
+  "main": "app.js",
+  "scripts": {
+    "start": "node app.js"
+  },
+  "author": "",
+  "license": "MIT",
+  "dependencies": {
+    "body-parser": "^1.17.2",
+    "express": "^4.15.3",
+    "rand-token": "^0.3.0",
+    "redis": "^2.7.1",
+    "request": "^2.81.0"
+  },
+  "devDependencies": {}
+}
