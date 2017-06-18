@@ -1,7 +1,7 @@
 var randtoken = require('rand-token');
 var request = require('request');
 var storage = require('./storage');
-var FB_ACCESS_TOKEN = process.env.FB_ACCESS_TOKEN || require('./tokens').FB_ACCESS_TOKEN;
+var utils = require('./utils');
 var TOKEN_PREFIX = 'syphon_enable_';
 
 var slack_command = function (command) {
@@ -37,10 +37,21 @@ Available commands:\n\
 var slack_receive = function (body) {
   storage.get('event-ts', body.event.ts, function (err, ts) {
     if (!ts) {
-      storage.set('event-ts', body.event.ts, true)
-      storage.get('sid-to-mid', body.event.user, function (err, mid) {
-        messenger_send(mid, body.event.text);
-      });
+      storage.set('event-ts', body.event.ts, true);
+      utils.slack_get_info(body, function (source, direct) {
+        var message = source + ' ' + body.event.text;
+        body.authed_users.forEach(function (sid) {
+          if (sid != body.event.user) {
+            if (direct || body.event.text.indexOf('<@' + sid + '>') >= 0) {
+              storage.get('sid-to-mid', sid, function (err, mid) {
+                // TODO: replace mentions <> with name
+                // TODO detect @here and @channel mentions
+                utils.messenger_send(mid, message);
+              });
+            }
+          }
+        });
+      })
     }
   })
 }
@@ -54,30 +65,14 @@ var messenger_receive = function (event) {
         storage.set('mid-to-sid', mid, sid);
         storage.set('sid-to-mid', sid, mid);
         storage.del('token-to-sid', token);
-        messenger_send(mid, 'Awesome! You\'re all set up :)');
+        utils.messenger_send(mid, 'Awesome! You\'re all set up :)');
       } else {
-        messenger_send(mid, 'Invalid token--try a new one!');
+        utils.messenger_send(mid, 'Invalid token--try a new one!');
       }
     });
   } else {
-    messenger_send(mid, 'echo: ' + event.message.text);
+    utils.messenger_send(mid, 'Hello friend!');
   }
-}
-
-var messenger_send = function (userId, text) {
-  var options = {
-    uri: 'https://graph.facebook.com/v2.6/me/messages?access_token=' + FB_ACCESS_TOKEN,
-    method: 'POST',
-    json: {
-      'recipient': {
-        'id': userId
-      },
-      'message': {
-        'text': text
-      }
-    }
-  };
-  request(options);
 }
 
 module.exports = {
